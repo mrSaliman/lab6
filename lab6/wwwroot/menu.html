@@ -1,0 +1,238 @@
+﻿<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width" />
+    <title>Список заказов</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.0/css/bootstrap.min.css" rel="stylesheet" />
+</head>
+<body>
+<h2>Список заказов</h2>
+<form name="orderForm">
+    <input type="hidden" name="id" value="0" />
+    <div class="form-group col-md-5">
+        <label>
+            Дата заказа:
+            <input class="form-control" name="orderDate" type="date" />
+        </label>
+    </div>
+    <div class="form-group col-md-5">
+        <label>
+            ID Клиента:
+            <input class="form-control" name="customerId" type="number" />
+        </label>
+    </div>
+    <div class="form-group col-md-5">
+        <label>
+            Специальная скидка:
+            <input class="form-control" name="specialDiscount" type="number" />
+        </label>
+    </div>
+    <div class="form-group col-md-5">
+        <label>
+            ID Ответственного сотрудника:
+            <input class="form-control" name="responsibleEmployeeId" type="number" />
+        </label>
+    </div>
+    <div class="form-group col-md-5">
+        <label>
+            Заказ завершен:
+            <input class="form-check-input" name="isCompleted" type="checkbox" />
+        </label>
+    </div>
+    <div class="form-group col-md-5">
+        <label>
+            Описание:
+            <input class="form-control" name="description" />
+        </label>
+    </div>
+    <div class="panel-body">
+        <button type="submit" id="submit" class="btn btn-primary">Сохранить</button>
+    </div>
+</form>
+<button id="reset" onclick="reset()" class="btn btn-primary">Сбросить</button>
+<table class="table table-condensed table-striped col-md-6">
+    <thead>
+    <tr>
+        <th>Id</th>
+        <th>Дата заказа</th>
+        <th>ID Клиента</th>
+        <th>Специальная скидка</th>
+        <th>Заказ завершен</th>
+        <th>ID Ответственного сотрудника</th>
+        <th></th>
+    </tr>
+    </thead>
+    <tbody>
+    </tbody>
+</table>
+<script>
+    function GetDate(dateStr) {
+        const date = new Date(dateStr);
+        const curr_date = date.getDate().toString().length === 1 ? "0" + date.getDate() : date.getDate();
+        const curr_month = (date.getMonth() + 1).toString().length === 1 ? "0" + (date.getMonth() + 1).toString() : (date.getMonth() + 1).toString();
+        const curr_year = date.getFullYear();
+        return curr_year + "-" + curr_month + "-" + curr_date;
+    }
+
+    async function GetOrders() {
+        const response = await fetch("/api/order", {
+            method: "GET",
+            headers: { "Accept": "application/json" }
+        });
+        if (response.ok === true) {
+            const orders = await response.json();
+            let rows = document.querySelector("tbody");
+            orders.forEach(order => {
+                rows.append(row(order));
+            });
+        }
+    }
+
+    async function GetOrder(id) {
+        const response = await fetch("/api/order/" + id, {
+            method: "GET",
+            headers: { "Accept": "application/json" }
+        });
+        if (response.ok === true) {
+            const order = await response.json();
+            const form = document.forms["orderForm"];
+            form.elements["id"].value = order.orderId;
+            form.elements["orderDate"].value = GetDate(order.orderDate);
+            form.elements["customerId"].value = order.customerId;
+            form.elements["specialDiscount"].value = order.specialDiscount;
+            form.elements["responsibleEmployeeId"].value = order.responsibleEmployeeId;
+            form.elements["isCompleted"].checked = order.isCompleted;
+        }
+    }
+
+    async function CreateOrder(orderDate, customerId, specialDiscount, responsibleEmployeeId, isCompleted, description) {
+        const response = await fetch("/api/order", {
+            method: "POST",
+            headers: { "Accept": "application/json", "Content-Type": "application/json" },
+            body: JSON.stringify({
+                orderDate: orderDate,
+                customerId: customerId,
+                specialDiscount: specialDiscount,
+                responsibleEmployeeId: responsibleEmployeeId,
+                isCompleted: isCompleted,
+                description: description
+            })
+        });
+        if (response.ok === true) {
+            await response.json();
+            reset();
+        }
+    }
+
+    async function EditOrder(orderId, orderDate, customerId, specialDiscount, responsibleEmployeeId, isCompleted, description) {
+        const response = await fetch("/api/order/" + orderId, {
+            method: "PUT",
+            headers: { "Accept": "application/json", "Content-Type": "application/json" },
+            body: JSON.stringify({
+                orderId: orderId,
+                orderDate: orderDate,
+                customerId: customerId,
+                specialDiscount: specialDiscount,
+                responsibleEmployeeId: responsibleEmployeeId,
+                isCompleted: isCompleted,
+                description: description
+            })
+        });
+        if (response.ok === true) {
+            await response.json();
+            reset();
+        }
+    }
+
+    async function DeleteOrder(id) {
+        const response = await fetch("/api/order/" + id, {
+            method: "DELETE",
+            headers: { "Accept": "application/json" }
+        });
+        if (response.ok === true) {
+            const order = await response.json();
+            document.querySelector("tr[data-rowid='" + order.orderId + "']").remove();
+        }
+    }
+
+    function reset() {
+        document.location.reload();
+    }
+
+    function row(order) {
+        const tr = document.createElement("tr");
+        tr.setAttribute("data-rowid", order.orderId);
+
+        const idTd = document.createElement("td");
+        idTd.append(order.orderId);
+        tr.append(idTd);
+
+        const orderDateTd = document.createElement("td");
+        orderDateTd.append(new Date(order.orderDate).toDateString());
+        tr.append(orderDateTd);
+
+        const customerIdTd = document.createElement("td");
+        customerIdTd.append(order.customerId);
+        tr.append(customerIdTd);
+
+        const specialDiscountTd = document.createElement("td");
+        specialDiscountTd.append(order.specialDiscount);
+        tr.append(specialDiscountTd);
+
+        const isCompletedTd = document.createElement("td");
+        isCompletedTd.append(order.isCompleted ? 'Да' : 'Нет');
+        tr.append(isCompletedTd);
+
+        const responsibleEmployeeIdTd = document.createElement("td");
+        responsibleEmployeeIdTd.append(order.responsibleEmployeeId);
+        tr.append(responsibleEmployeeIdTd);
+
+        const linksTd = document.createElement("td");
+
+        const editLink = document.createElement("a");
+        editLink.setAttribute("data-id", order.orderId);
+        editLink.setAttribute("style", "cursor:pointer;padding:15px;");
+        editLink.append("Изменить");
+        editLink.addEventListener("click", e => {
+            e.preventDefault();
+            GetOrder(order.orderId);
+        });
+        linksTd.append(editLink);
+
+        const removeLink = document.createElement("a");
+        removeLink.setAttribute("data-id", order.orderId);
+        removeLink.setAttribute("style", "cursor:pointer;padding:15px;");
+        removeLink.append("Удалить");
+        removeLink.addEventListener("click", e => {
+            e.preventDefault();
+            DeleteOrder(order.orderId);
+        });
+
+        linksTd.append(removeLink);
+        tr.appendChild(linksTd);
+
+        return tr;
+    }
+
+    document.forms["orderForm"].addEventListener("submit", e => {
+        e.preventDefault();
+        const form = document.forms["orderForm"];
+        const id = form.elements["id"].value;
+        const orderDate = form.elements["orderDate"].value;
+        const customerId = form.elements["customerId"].value;
+        const specialDiscount = form.elements["specialDiscount"].value;
+        const responsibleEmployeeId = form.elements["responsibleEmployeeId"].value;
+        const isCompleted = form.elements["isCompleted"].checked;
+        const description = form.elements["description"].value;
+
+        if (id === 0)
+            CreateOrder(orderDate, customerId, specialDiscount, responsibleEmployeeId, isCompleted, description);
+        else
+            EditOrder(id, orderDate, customerId, specialDiscount, responsibleEmployeeId, isCompleted, description);
+    });
+
+    GetOrders();
+</script>
+</body>
+</html>
